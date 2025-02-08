@@ -1,0 +1,12 @@
+version: "3.9"
+services:
+  hdg_app:
+    build: .
+    restart: always  # Restart the container if it fails
+    environment:
+      HDGIP1: "${HDGIP1}"
+      HDGIP2: "${HDGIP2}"
+      SUPABASE_URL: "${SUPABASE_URL}"
+      SUPABASE_KEY: "${SUPABASE_KEY}"
+    volumes:
+      - .:/app  # Mount the project directory into the container
