@@ -111,8 +111,7 @@ def main():
 
         log_message("All done! Waiting 10 minutes before next run...")
         
-        # Wait 10 minutes before doing it all again
-        time.sleep(600)  # 10 minutes in seconds
+        time.sleep(120*60)  # 120 minutes in seconds
 
 
 if __name__ == "__main__":
