@@ -7,6 +7,7 @@ import traceback
 import time
 import cv2
 import uuid
+import re
 
 load_dotenv()
 
@@ -33,7 +34,15 @@ def log_message(message):
 def log_error(message):
     log_message(f"ERROR: {message}")
 
-def take_camera_screenshot(mac_address):
+def extract_ip_from_rtsp_url(rtsp_url):
+    """Extrahiert die IP-Adresse aus einer RTSP-URL."""
+    match = re.search(r"@([\d.]+)", rtsp_url)
+    if match:
+        return match.group(1)
+    else:
+        return None
+
+def take_camera_screenshot(mac_address, supabase: Client):
     try:
         # Öffne den RTSP Stream
         cap = cv2.VideoCapture(CAMERA)
@@ -49,13 +58,33 @@ def take_camera_screenshot(mac_address):
         ret, frame = cap.read()
         
         if ret:
+            # Erstelle den Ordnernamen basierend auf der Raspberry Pi MAC-Adresse
+            folder_name = mac_address # Entferne Doppelpunkte
+            
             # Erstelle den Dateinamen
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"{mac_address}_{timestamp}.jpg"
             
-            # Speichere das Bild
-            cv2.imwrite(filename, frame)
-            log_message(f"Screenshot gespeichert als {filename}")
+            # Definiere den vollständigen Pfad im Bucket
+            bucket_path = f"{folder_name}/{filename}"
+            
+            # Konvertiere den Frame in Bytes
+            ret, buffer = cv2.imencode('.jpg', frame)
+            if not ret:
+                log_error("Fehler beim Konvertieren des Frames in JPG")
+                return
+            image_bytes = buffer.tobytes()
+            
+            # Lade das Bild in den Supabase Bucket hoch
+            try:
+                response = supabase.storage.from_("hackbunker").upload(
+                    bucket_path,
+                    image_bytes,
+                    file_options={"content-type": "image/jpeg"}
+                )
+                log_message(f"Bild hochgeladen nach: {bucket_path}")
+            except Exception as upload_error:
+                log_error(f"Fehler beim Hochladen in Supabase Bucket: {upload_error}")
         else:
             log_error("Konnte kein Frame vom Stream lesen")
             
@@ -75,10 +104,13 @@ def main():
     except:
         mac_address = "unknown"
         log_error("Could not get MAC address from eth0")
+    
+    # Connect to Supabase
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
         
     # Erstelle einen Screenshot beim Start
     if CAMERA:
-        take_camera_screenshot(mac_address)
+        take_camera_screenshot(mac_address, supabase)
     else:
         log_error("CAMERA Umgebungsvariable nicht gesetzt")
 
