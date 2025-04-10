@@ -5,6 +5,8 @@ from supabase import create_client, Client
 import datetime
 import traceback
 import time
+import cv2
+import uuid
 
 load_dotenv()
 
@@ -12,8 +14,13 @@ HDGIP1 = os.getenv('HDGIP1')
 HDGIP2 = os.getenv('HDGIP2')
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+CAMERA = os.getenv('CAMERA')
 
 from worker import hdg
+
+def get_mac_address():
+    mac = uuid.getnode()
+    return ':'.join(('%012X' % mac)[i:i+2] for i in range(0, 12, 2))
 
 # Set up logging
 LOG_FILE = "hdg_script.log"
@@ -26,8 +33,54 @@ def log_message(message):
 def log_error(message):
     log_message(f"ERROR: {message}")
 
+def take_camera_screenshot(mac_address):
+    try:
+        # Öffne den RTSP Stream
+        cap = cv2.VideoCapture(CAMERA)
+        
+        if not cap.isOpened():
+            log_error("Kann RTSP Stream nicht öffnen")
+            return
+            
+        # Warte kurz, damit der Stream sich stabilisieren kann
+        time.sleep(2)
+        
+        # Lese ein Frame
+        ret, frame = cap.read()
+        
+        if ret:
+            # Erstelle den Dateinamen
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"{mac_address}_{timestamp}.jpg"
+            
+            # Speichere das Bild
+            cv2.imwrite(filename, frame)
+            log_message(f"Screenshot gespeichert als {filename}")
+        else:
+            log_error("Konnte kein Frame vom Stream lesen")
+            
+        # Schließe den Stream
+        cap.release()
+        
+    except Exception as e:
+        log_error(f"Fehler beim Erstellen des Screenshots: {e}\n{traceback.format_exc()}")
+
 def main():
     log_message("Script started")
+    
+    # Get MAC address of eth0
+    try:
+        mac_address = get_mac_address()
+
+    except:
+        mac_address = "unknown"
+        log_error("Could not get MAC address from eth0")
+        
+    # Erstelle einen Screenshot beim Start
+    if CAMERA:
+        take_camera_screenshot(mac_address)
+    else:
+        log_error("CAMERA Umgebungsvariable nicht gesetzt")
 
     # Run forever
     while True:
@@ -73,7 +126,8 @@ def main():
                         "anlage": "Brenner 1",
                         "key": query_id,
                         "value": value1,
-                        "ip": HDGIP1
+                        "ip": HDGIP1,
+                        "mac": mac_address
                     }
                     try:
                         data, count = supabase.table("hdg_meter").insert(data1).execute()
@@ -95,7 +149,8 @@ def main():
                         "anlage": "Brenner 2",
                         "key": query_id,
                         "value": value2,
-                        "ip": HDGIP2
+                        "ip": HDGIP2,
+                        "mac": mac_address
                     }
                     try:
                         data, count = supabase.table("hdg_meter").insert(data2).execute()
