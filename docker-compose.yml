@@ -7,5 +7,6 @@ services:
       HDGIP2: "${HDGIP2}"
       SUPABASE_URL: "${SUPABASE_URL}"
       SUPABASE_KEY: "${SUPABASE_KEY}"
+      CAMERA: "${CAMERA}"
     volumes:
       - .:/app  # Mount the project directory into the container
