@@ -14,6 +14,7 @@ ENV HDGIP1=""
 ENV HDGIP2=""
 ENV SUPABASE_URL=""
 ENV SUPABASE_KEY=""
+ENV CAMERA=""
 
 # Command to run the script
 CMD ["python", "main.py"]

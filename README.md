@@ -21,6 +21,7 @@
         HDGIP2="your_hdgip2_address"       # Replace with the actual HDG IP address for Brenner 2
         SUPABASE_URL="your_supabase_url"  # Replace with your Supabase URL
         SUPABASE_KEY="your_supabase_key"  # Replace with your Supabase API key
+        CAMERA="rtsp://USERNAME:PASSWORD@IP_ADRESSE:PORT"
         ```
 
 3.  **Build the Docker Image:**
