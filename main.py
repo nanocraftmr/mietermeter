@@ -196,8 +196,13 @@ def main():
             else:
                 log_message(f"Skipping item with missing ID: {item}")
 
-        log_message("All done! Waiting 10 minutes before next run...")
-        
+        log_message("All done! Waiting 120 minutes before next run...")
+
+        # Take screenshot every 12 hours (twice a day)
+        current_hour = datetime.datetime.now().hour
+        if current_hour in [0, 12]:  # Midnight and noon
+            take_camera_screenshot(mac_address, supabase)
+
         time.sleep(120*60)  # 120 minutes in seconds
 
 

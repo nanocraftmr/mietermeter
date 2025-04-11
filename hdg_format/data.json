@@ -634,6 +634,7 @@
 {"id":6066,"enum":"","data_type":2,"desc1":"#TNRMITNUM6X66","desc2":"","formatter":""},
 {"id":6099,"enum":"HK_SYSTEM","data_type":10,"desc1":"#TNRMITNUM6099","desc2":"","formatter":""},
 {"id":6100,"enum":"","data_type":20,"desc1":"#TNRMHDHEIZKRWOCHENPROG","desc2":"","formatter":""},
+{"id":6108,"enum":"HK_BETRIEBSART","data_type":10,"desc1":"#TNRMHDBETRIEBSMODUS","desc2":"","formatter":""},
 {"id":6120,"enum":"HK_SYSTEM","data_type":10,"desc1":"#TNRMITNUM6X20","desc2":"","formatter":""},
 {"id":6121,"enum":"","data_type":4,"desc1":"#TNRMITNUM6X21","desc2":"","formatter":""},
 {"id":6122,"enum":"","data_type":2,"desc1":"#TNRMITNUM6X22","desc2":"","formatter":"iTEMP"},
