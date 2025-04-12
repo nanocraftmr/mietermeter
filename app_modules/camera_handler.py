@@ -8,6 +8,10 @@ from . import config
 from . import logger
 from . import supabase_handler
 
+from supabase import Client
+from typing import Optional
+_supabase_client: Optional[Client] = None
+
 # To prevent multiple screenshots if the loop runs very fast near the designated hour
 _last_screenshot_hour = -1
 _last_screenshot_day = -1

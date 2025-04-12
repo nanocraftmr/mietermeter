@@ -2,6 +2,10 @@
 import os
 from dotenv import load_dotenv
 
+from supabase import Client
+from typing import Optional
+_supabase_client: Optional[Client] = None
+
 # Load environment variables from .env file located in the parent directory
 # Assumes .env is in the same directory as main.py
 dotenv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')

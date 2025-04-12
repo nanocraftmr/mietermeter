@@ -4,8 +4,9 @@ from postgrest.exceptions import APIError # Import specific Supabase error type
 # Use relative imports for modules in the same package
 from . import config
 from . import logger
+from typing import Optional
 
-_supabase_client: Client | None = None
+_supabase_client: Optional[Client] = None
 
 def init_supabase_client() -> Client | None:
     """Initializes and returns the Supabase client."""
@@ -55,11 +56,11 @@ def save_hdg_data(data_to_insert: dict):
     try:
         # Ensure value is treated correctly, convert if necessary
         # Example: Ensure value is string, handle potential errors during conversion
-        # try:
-        #     data_to_insert['value'] = str(data_to_insert.get('value'))
-        # except Exception as conversion_error:
-        #     logger.log_error(f"Error converting value to string for DB save (Anlage={anlage}, Key={key}): {conversion_error}", include_traceback=False)
-        #     return False
+        try:
+            data_to_insert['value'] = str(data_to_insert.get('value'))
+        except Exception as conversion_error:
+            logger.log_error(f"Error converting value to string for DB save (Anlage={anlage}, Key={key}): {conversion_error}", include_traceback=False)
+            return False
 
         # Execute the insert operation
         response = supabase.table(config.SUPABASE_TABLE).insert(data_to_insert).execute()

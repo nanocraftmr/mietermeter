@@ -7,6 +7,10 @@ import os
 from . import config
 from . import logger
 
+from supabase import Client
+from typing import Optional
+_supabase_client: Optional[Client] = None
+
 def get_mac_address():
     """Retrieves the MAC address of the machine."""
     try:

@@ -6,6 +6,10 @@ import os
 # Use relative import to get config from the same package
 from . import config
 
+from supabase import Client
+from typing import Optional
+_supabase_client: Optional[Client] = None
+
 # Ensure log file path is relative to the script execution directory (where main.py is)
 LOG_FILE_PATH = os.path.abspath(config.LOG_FILE)
 
