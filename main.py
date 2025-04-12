@@ -10,10 +10,6 @@ from app_modules import utils
 from app_modules import camera_handler
 from app_modules import supabase_handler
 
-from supabase import Client
-from typing import Optional
-_supabase_client: Optional[Client] = None
-
 # Try importing from the worker package (requires worker/__init__.py)
 try:
     from worker import hdg
