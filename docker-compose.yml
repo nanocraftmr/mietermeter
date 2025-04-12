@@ -2,6 +2,7 @@ services:
   hdg_app:
     build: .
     restart: always  # Restart the container if it fails
+    network_mode: host # Use mac from host
     environment:
       HDGIP1: "${HDGIP1}"
       HDGIP2: "${HDGIP2}"
