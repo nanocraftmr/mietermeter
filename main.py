@@ -146,13 +146,14 @@ def main_loop():
         else:
              logger.log_error(f"Query data loaded but is not a non-empty list. Check content of '{config.QUERY_DATA_FILE}'. Type: {type(query_data)}")
 
-        # --- Periodic Screenshot Logic ---
+        # --- Periodic Screenshot Logic: Take picture at 2am and 2pm only ---
         now = datetime.datetime.now()
         current_hour = now.hour
-        if config.CAMERA_RTSP_URL and current_hour in config.SCREENSHOT_HOURS:
-             logger.log_message(f"Current hour ({current_hour}) is a designated screenshot hour. Attempting screenshot.")
-             # camera_handler internally checks if screenshot was already taken this hour
-             camera_handler.take_and_upload_screenshot(mac_address)
+        # Only take screenshot at 2am (2) or 2pm (14)
+        if config.CAMERA_RTSP_URL and current_hour in (2, 14):
+            logger.log_message(f"Current hour ({current_hour}) is a designated screenshot hour (2am/2pm). Attempting screenshot.")
+            # camera_handler internally checks if screenshot was already taken this hour
+            camera_handler.take_and_upload_screenshot(mac_address)
         # else: Not a designated hour or camera not configured
 
         # --- Cycle End & Wait ---
