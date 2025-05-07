@@ -1,4 +1,3 @@
-# app_modules/logger.py
 import datetime
 import re
 import traceback
@@ -43,7 +42,7 @@ def log_error(message, include_traceback=True):
 
 
 def cleanup_old_logs():
-    """Removes log entries older than LOG_RETENTION_DAYS."""
+    """Removes log entries older than LOG_RETENTION_DAYS and ensures the log file doesn't grow too large."""
     log_message(f"Attempting log cleanup (removing entries older than {config.LOG_RETENTION_DAYS} days from {LOG_FILE_PATH})...")
     try:
         cutoff = datetime.datetime.now() - datetime.timedelta(days=config.LOG_RETENTION_DAYS)
@@ -86,6 +85,16 @@ def cleanup_old_logs():
         else:
             log_message(f"Log cleanup complete. No old entries found to remove.")
 
+        # Ensure the log file doesn't exceed a certain size (e.g., 5 MB)
+        max_log_size = 5 * 1024 * 1024  # 5 MB
+        if os.path.getsize(LOG_FILE_PATH) > max_log_size:
+            log_message(f"Log file size exceeds {max_log_size / (1024 * 1024)} MB. Truncating the file.")
+            with open(LOG_FILE_PATH, "r+") as f:
+                f.seek(-max_log_size, os.SEEK_END)  # Move to the last 5 MB of the file
+                lines = f.readlines()
+                f.seek(0)
+                f.writelines(lines)
+                f.truncate()
 
     except Exception as e:
         # Use log_error without traceback for cleanup errors to avoid recursion if logging fails

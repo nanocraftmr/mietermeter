@@ -146,21 +146,27 @@ def main_loop():
         else:
              logger.log_error(f"Query data loaded but is not a non-empty list. Check content of '{config.QUERY_DATA_FILE}'. Type: {type(query_data)}")
 
-        # --- Periodic Screenshot Logic: Take picture at 2am and 2pm only ---
+        # --- Periodic Screenshot Logic: Take picture at 8am and 8pm ---
         now = datetime.datetime.now()
         current_hour = now.hour
-        # Only take screenshot at 2am (2) or 2pm (14)
-        if config.CAMERA_RTSP_URL and current_hour in (2, 14):
-            logger.log_message(f"Current hour ({current_hour}) is a designated screenshot hour (2am/2pm). Attempting screenshot.")
-            # camera_handler internally checks if screenshot was already taken this hour
-            camera_handler.take_and_upload_screenshot(mac_address)
-        # else: Not a designated hour or camera not configured
+        current_minute = now.minute
 
+        # Take screenshots at 8am (8) and 8pm (20)
+        if config.CAMERA_RTSP_URL and current_hour in (8, 20):
+            # Add a tighter time window check (first 5 minutes of the hour)
+            # This ensures we don't miss the hour if the loop takes longer
+            if current_minute < 5:
+                logger.log_message(f"Current time ({current_hour:02d}:{current_minute:02d}) is a designated screenshot hour (8am/8pm). Attempting screenshot.")
+                camera_handler.take_and_upload_screenshot(mac_address)
+        
         # --- Cycle End & Wait ---
         logger.log_message(f"Cycle {cycle_count} complete.")
-        logger.cleanup_old_logs() # Clean logs at the end of the cycle
-        wait_seconds = config.MAIN_LOOP_SLEEP_MINUTES * 60
-        logger.log_message(f"Waiting for {config.MAIN_LOOP_SLEEP_MINUTES} minutes ({wait_seconds} seconds) before next cycle...")
+        logger.cleanup_old_logs()
+        
+        # Adjust sleep duration to ensure we don't miss screenshot times
+        # Calculate time until next check (max 5 minutes)
+        wait_seconds = min(300, config.MAIN_LOOP_SLEEP_MINUTES * 60)  # 300 seconds = 5 minutes
+        logger.log_message(f"Waiting for {wait_seconds//60} minutes before next cycle...")
         time.sleep(wait_seconds)
 
 
