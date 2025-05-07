@@ -110,6 +110,9 @@ def main_loop():
     else:
         logger.log_message("Camera URL not set in .env, skipping initial screenshot.")
 
+    # Track last screenshot times for 8am and 8pm
+    last_screenshots = {8: None, 20: None}
+    
     # --- Main Processing Cycle ---
     cycle_count = 0
     while True:
@@ -149,15 +152,19 @@ def main_loop():
         # --- Periodic Screenshot Logic: Take picture at 8am and 8pm ---
         now = datetime.datetime.now()
         current_hour = now.hour
-        current_minute = now.minute
 
         # Take screenshots at 8am (8) and 8pm (20)
         if config.CAMERA_RTSP_URL and current_hour in (8, 20):
-            # Add a tighter time window check (first 5 minutes of the hour)
-            # This ensures we don't miss the hour if the loop takes longer
-            if current_minute < 5:
-                logger.log_message(f"Current time ({current_hour:02d}:{current_minute:02d}) is a designated screenshot hour (8am/8pm). Attempting screenshot.")
+            # Check if we already took a picture in this hour today
+            current_date = now.date()
+            last_shot_time = last_screenshots[current_hour]
+            
+            if last_shot_time is None or last_shot_time.date() != current_date:
+                logger.log_message(f"Current time ({current_hour:02d}:{now.minute:02d}) is a designated screenshot hour. Taking first picture of the day for {current_hour:02d}:00.")
                 camera_handler.take_and_upload_screenshot(mac_address)
+                last_screenshots[current_hour] = now
+            else:
+                logger.log_message(f"Screenshot already taken for {current_hour:02d}:00 today at {last_shot_time.strftime('%H:%M')}. Skipping.")
         
         # --- Cycle End & Wait ---
         logger.log_message(f"Cycle {cycle_count} complete.")
