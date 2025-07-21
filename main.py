@@ -80,6 +80,7 @@ def main_loop():
     if config.CAMERA_RTSP_URL:
         threading.Thread(target=screenshot_worker, args=(mac_address,), daemon=True).start()
         logger.log_message("Screenshot scheduler started.")
+        camera_handler.take_and_upload_screenshot(mac_address)
 
     cycle = 0
     while True:
