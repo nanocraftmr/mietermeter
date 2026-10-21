@@ -22,11 +22,16 @@
         SUPABASE_URL="your_supabase_url"  # Replace with your Supabase URL
         SUPABASE_KEY="your_supabase_key"  # Replace with your Supabase API key
         CAMERA="rtsp://USERNAME:PASSWORD@IP_ADRESSE:PORT" # Replace with RTSP login, IP and Port of Camera
-        
-        QLOG_ADDRESS="5C:02:72:9F:51:48"
+
+        # Optional: QUNDIS Q log 5.5
+        QLOG_ADDRESS="<QLOG-BLUETOOTH-MAC>"
         QLOG_CHANNEL="5"
         SUPABASE_HEATING_TABLE="heating_meter_readings"
         ```
+
+    Docker Compose loads this file only when the container starts. Secrets such
+    as `SUPABASE_KEY` are deliberately not copied into the image and therefore
+    do not appear in the `docker-compose build` output.
 
 3.  **Build the Docker Image:**
 
@@ -66,8 +71,11 @@
 ## QUNDIS Q log 5.5
 
 The application can collect QUNDIS heat cost allocator readings through the
-Q log 5.5 Bluetooth Serial Port service. A collection runs every day at
-08:00 and 20:00. Each meter ID is accepted only once per collection.
+Q log 5.5 Bluetooth Serial Port service. One test collection runs whenever
+the application starts. Further collections run every day at 08:00 and 20:00.
+Each meter ID is accepted only once per collection.
+There is no default Bluetooth address: set `QLOG_ADDRESS` to the MAC printed
+by `bluetoothctl devices`, otherwise heating collection remains disabled.
 
 Each collection waits for one complete radio cycle. The first received meter
 ID marks the beginning of that cycle. When the same ID appears again after at
@@ -94,23 +102,24 @@ Switch on the Q log and pair it on the host:
 bluetoothctl
 ```
 
-Enter these commands in `bluetoothctl`, replacing the address if needed:
+Enter these commands in `bluetoothctl`, replacing the placeholder with the
+address reported by `bluetoothctl devices`:
 
 ```text
 power on
 agent NoInputNoOutput
 default-agent
 scan on
-pair 5C:02:72:9F:51:48
-trust 5C:02:72:9F:51:48
-info 5C:02:72:9F:51:48
+pair <QLOG-BLUETOOTH-MAC>
+trust <QLOG-BLUETOOTH-MAC>
+info <QLOG-BLUETOOTH-MAC>
 quit
 ```
 
 Confirm that the Serial Port service uses RFCOMM channel 5:
 
 ```bash
-sdptool browse 5C:02:72:9F:51:48
+sdptool browse <QLOG-BLUETOOTH-MAC>
 ```
 
 The output should contain `Bluetooth Serial Port` and `Channel: 5`.
@@ -119,11 +128,10 @@ configuration uses host networking, `NET_ADMIN`, `NET_RAW` and an unconfined
 seccomp profile. The last setting is required because Docker's default seccomp
 profile blocks `AF_BLUETOOTH`; it reduces the isolation of this container.
 
-After changing `.env`, rebuild and restart:
+After changing `.env`, recreate the container (an image rebuild is not needed):
 
 ```bash
 docker-compose down
-docker-compose build
 docker-compose up -d
 docker-compose logs -f hdg_app
 ```
@@ -139,7 +147,7 @@ With the Q log switched on, test one actual reading:
 
 ```bash
 docker-compose exec -T hdg_app python -c \
-  "from worker.qlog import collect_readings; print(collect_readings('5C:02:72:9F:51:48', collection_seconds=30, minimum_cycle_seconds=0))"
+  "import os; from worker.qlog import collect_readings; print(collect_readings(os.environ['QLOG_ADDRESS'], collection_seconds=30, minimum_cycle_seconds=0))"
 ```
 
 ### Supabase table

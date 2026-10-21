@@ -138,6 +138,12 @@ def heating_worker(mac_address):
         + ", ".join(str(hour) for hour in config.QLOG_READING_HOURS)
     )
     collected_today = {hour: None for hour in config.QLOG_READING_HOURS}
+    startup_time = datetime.datetime.now()
+
+    logger.log_message("Starting one initial Q log collection for testing.")
+    collect_and_save_heating_data(mac_address)
+    if startup_time.hour in collected_today:
+        collected_today[startup_time.hour] = startup_time.date()
 
     while True:
         now = datetime.datetime.now()
@@ -179,8 +185,11 @@ def main_loop():
             daemon=True,
         ).start()
     else:
-        logger.log_message(
-            "QLOG_ADDRESS not configured; heating collection disabled."
+        logger.log_error(
+            "Q log heating collection disabled: QLOG_ADDRESS is missing. "
+            "Add the Q log Bluetooth MAC address to .env and restart the "
+            "container. No default Bluetooth address is used.",
+            include_traceback=False,
         )
 
     cycle = 0

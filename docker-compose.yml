@@ -3,15 +3,8 @@ services:
     build: .
     restart: always  # Restart the container if it fails
     network_mode: host # Use mac from host
-    environment:
-      HDGIP1: "${HDGIP1}"
-      HDGIP2: "${HDGIP2}"
-      SUPABASE_URL: "${SUPABASE_URL}"
-      SUPABASE_KEY: "${SUPABASE_KEY}"
-      CAMERA: "${CAMERA}"
-      QLOG_ADDRESS: "${QLOG_ADDRESS}"
-      QLOG_CHANNEL: "${QLOG_CHANNEL:-5}"
-      SUPABASE_HEATING_TABLE: "${SUPABASE_HEATING_TABLE:-heating_meter_readings}"
+    env_file:
+      - .env
     cap_add:
       - NET_ADMIN
       - NET_RAW
