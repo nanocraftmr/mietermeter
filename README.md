@@ -22,8 +22,7 @@
         SUPABASE_URL="your_supabase_url"  # Replace with your Supabase URL
         SUPABASE_KEY="your_supabase_key"  # Replace with your Supabase API key
         CAMERA="rtsp://USERNAME:PASSWORD@IP_ADRESSE:PORT" # Replace with RTSP login, IP and Port of Camera
-
-        # Optional: QUNDIS Q log 5.5
+        
         QLOG_ADDRESS="5C:02:72:9F:51:48"
         QLOG_CHANNEL="5"
         SUPABASE_HEATING_TABLE="heating_meter_readings"
