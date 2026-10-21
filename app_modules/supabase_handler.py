@@ -81,6 +81,53 @@ def save_hdg_data(data_to_insert: dict):
         logger.log_error(f"Unexpected error during Supabase DB insert (Anlage: {anlage}, Key: {key}): {e}", include_traceback=True)
         return False # Indicate failure
 
+def save_heating_data(readings: list[dict]):
+    """Saves one deduplicated Q log collection as a single DB insert."""
+    supabase = get_supabase_client()
+    if not supabase:
+        logger.log_error(
+            "Supabase client not available. Cannot save heating data.",
+            include_traceback=False,
+        )
+        return False
+    if not readings:
+        logger.log_error(
+            "No heating readings supplied for insertion.",
+            include_traceback=False,
+        )
+        return False
+
+    try:
+        response = (
+            supabase.table(config.SUPABASE_HEATING_TABLE)
+            .insert(readings)
+            .execute()
+        )
+        if hasattr(response, "data") and response.data:
+            logger.log_message(
+                f"Saved {len(response.data)} heating meter readings."
+            )
+            return True
+        logger.log_error(
+            f"Heating meter insert returned no data: {response}",
+            include_traceback=False,
+        )
+        return False
+    except APIError as api_err:
+        logger.log_error(
+            "Supabase API error while saving heating data: "
+            f"{api_err.message} (Code: {api_err.code}, "
+            f"Details: {api_err.details})",
+            include_traceback=False,
+        )
+        return False
+    except Exception as e:
+        logger.log_error(
+            f"Unexpected error while saving heating data: {e}",
+            include_traceback=True,
+        )
+        return False
+
 def upload_image_to_storage(image_bytes: bytes, bucket_path: str):
     """Uploads image bytes to Supabase storage."""
     supabase = get_supabase_client()

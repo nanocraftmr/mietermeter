@@ -15,6 +15,9 @@ ENV HDGIP2=""
 ENV SUPABASE_URL=""
 ENV SUPABASE_KEY=""
 ENV CAMERA=""
+ENV QLOG_ADDRESS=""
+ENV QLOG_CHANNEL="5"
+ENV SUPABASE_HEATING_TABLE="heating_meter_readings"
 
 # Command to run the script
 CMD ["python", "main.py"]
