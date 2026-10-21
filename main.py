@@ -2,14 +2,18 @@ import time
 import datetime
 import sys
 import threading
+import uuid
 
 from app_modules import config, logger, utils, camera_handler, supabase_handler
 
 try:
-    from worker import hdg
+    from worker import hdg, qlog
 except ImportError:
-    logger.log_error("Failed to import 'hdg' from 'worker' package. Ensure 'worker/__init__.py' exists.", include_traceback=False)
-    sys.exit("Critical Error: Cannot import HDG worker module.")
+    logger.log_error(
+        "Failed to import worker modules. Ensure worker files exist.",
+        include_traceback=True,
+    )
+    sys.exit("Critical Error: Cannot import worker modules.")
 
 
 def process_hdg_source(source_config, query_id, mac_address):
@@ -60,6 +64,92 @@ def screenshot_worker(mac_address):
         time.sleep(60)  # check every minute
 
 
+def collect_and_save_heating_data(mac_address):
+    logger.log_message(
+        f"Starting Q log collection from {config.QLOG_ADDRESS} for up to "
+        f"{config.QLOG_COLLECTION_SECONDS} seconds."
+    )
+    try:
+        readings = qlog.collect_readings(
+            address=config.QLOG_ADDRESS,
+            channel=config.QLOG_CHANNEL,
+            collection_seconds=config.QLOG_COLLECTION_SECONDS,
+            minimum_cycle_seconds=config.QLOG_MINIMUM_CYCLE_SECONDS,
+        )
+    except Exception as e:
+        logger.log_error(f"Q log collection failed: {e}", include_traceback=True)
+        return False
+
+    if not readings:
+        logger.log_error(
+            "Q log collection completed without meter readings.",
+            include_traceback=False,
+        )
+        return False
+
+    collection_id = str(uuid.uuid4())
+    captured_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    rows = []
+    for reading in readings:
+        rows.append(
+            {
+                "collection_id": collection_id,
+                "captured_at": captured_at,
+                "source_mac": mac_address,
+                "qlog_address": config.QLOG_ADDRESS,
+                "meter_id": reading["meter_id"],
+                "manufacturer": reading["manufacturer"],
+                "version": reading["version"],
+                "device_type": reading["device_type"],
+                "access_number": reading["access_number"],
+                "current_value": reading["current_value"],
+                "setpoint_value": reading["setpoint_value"],
+                "setpoint_date": (
+                    reading["setpoint_date"].date().isoformat()
+                    if reading["setpoint_date"]
+                    else None
+                ),
+                "meter_time": (
+                    reading["meter_time"].isoformat()
+                    if reading["meter_time"]
+                    else None
+                ),
+                "battery_low": reading["battery_low"],
+                "status": reading["status"],
+                "error_date": (
+                    reading["error_date"].date().isoformat()
+                    if reading["error_date"]
+                    else None
+                ),
+                "rssi_dbm": reading["rssi_dbm"],
+            }
+        )
+
+    meter_ids = ", ".join(sorted(row["meter_id"] for row in rows))
+    logger.log_message(
+        f"Q log collection found {len(rows)} unique meters: {meter_ids}"
+    )
+    return supabase_handler.save_heating_data(rows)
+
+
+def heating_worker(mac_address):
+    logger.log_message(
+        "Heating scheduler started for hours: "
+        + ", ".join(str(hour) for hour in config.QLOG_READING_HOURS)
+    )
+    collected_today = {hour: None for hour in config.QLOG_READING_HOURS}
+
+    while True:
+        now = datetime.datetime.now()
+        if (
+            now.hour in collected_today
+            and collected_today[now.hour] != now.date()
+        ):
+            collected_today[now.hour] = now.date()
+            collect_and_save_heating_data(mac_address)
+        time.sleep(60)
+
+
 def main_loop():
     logger.log_message("=" * 30 + " Script Start " + "=" * 30)
     logger.log_message(f"Current Time: {datetime.datetime.now()}")
@@ -81,6 +171,17 @@ def main_loop():
         threading.Thread(target=screenshot_worker, args=(mac_address,), daemon=True).start()
         logger.log_message("Screenshot scheduler started.")
         camera_handler.take_and_upload_screenshot(mac_address)
+
+    if config.QLOG_ADDRESS:
+        threading.Thread(
+            target=heating_worker,
+            args=(mac_address,),
+            daemon=True,
+        ).start()
+    else:
+        logger.log_message(
+            "QLOG_ADDRESS not configured; heating collection disabled."
+        )
 
     cycle = 0
     while True:

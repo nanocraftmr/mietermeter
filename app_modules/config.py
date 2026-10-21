@@ -13,6 +13,11 @@ HDGIP2 = os.getenv('HDGIP2')
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 CAMERA_RTSP_URL = os.getenv('CAMERA') # Renamed for clarity
+QLOG_ADDRESS = os.getenv('QLOG_ADDRESS')
+QLOG_CHANNEL = int(os.getenv('QLOG_CHANNEL', '5'))
+QLOG_COLLECTION_SECONDS = 16 * 60
+QLOG_MINIMUM_CYCLE_SECONDS = 10 * 60
+QLOG_READING_HOURS = (8, 20)
 
 # --- Application Constants ---
 LOG_FILE = "hdg_script.log" # Log file will be created in the directory where main.py is run
@@ -20,6 +25,10 @@ LOG_RETENTION_DAYS = 7
 QUERY_DATA_FILE = "hdg_format/data.json" # Assumes hdg_format dir is relative to where main.py runs
 SUPABASE_BUCKET = "hackbunker" # Your Supabase bucket name
 SUPABASE_TABLE = "hdg_meter" # Your Supabase table name
+SUPABASE_HEATING_TABLE = os.getenv(
+    'SUPABASE_HEATING_TABLE',
+    'heating_meter_readings',
+)
 MAIN_LOOP_SLEEP_MINUTES = 120
 HDG_SOURCES = [
     {"name": "Brenner 1", "ip": HDGIP1},
