@@ -19,6 +19,38 @@ QLOG_COLLECTION_SECONDS = 16 * 60
 QLOG_MINIMUM_CYCLE_SECONDS = 10 * 60
 QLOG_READING_HOURS = (8, 20)
 
+def _parse_fronius_ips(raw: str | None) -> list[str]:
+    """Parse one or many Fronius IPs from FRONIUS_IPS without code changes.
+
+    Accepts comma / semicolon / whitespace separated values, e.g.:
+      FRONIUS_IPS=<FRONIUS-IP>
+      FRONIUS_IPS=<FRONIUS-IP-1>,<FRONIUS-IP-2>
+    """
+    if not raw:
+        return []
+    normalized = raw.replace(";", ",").replace("\n", ",")
+    parts = []
+    for chunk in normalized.split(","):
+        for token in chunk.split():
+            ip = token.strip().strip('"').strip("'")
+            if ip:
+                parts.append(ip)
+    # preserve order, drop duplicates
+    seen = set()
+    unique = []
+    for ip in parts:
+        if ip not in seen:
+            seen.add(ip)
+            unique.append(ip)
+    return unique
+
+
+FRONIUS_IPS = _parse_fronius_ips(os.getenv('FRONIUS_IPS'))
+try:
+    FRONIUS_READING_HOUR = int(os.getenv('FRONIUS_READING_HOUR', '23'))
+except ValueError:
+    FRONIUS_READING_HOUR = 23
+
 # --- Application Constants ---
 LOG_FILE = "hdg_script.log" # Log file will be created in the directory where main.py is run
 LOG_RETENTION_DAYS = 7
@@ -29,6 +61,7 @@ SUPABASE_HEATING_TABLE = os.getenv(
     'SUPABASE_HEATING_TABLE',
     'heating_meter_readings',
 )
+SUPABASE_PV_TABLE = os.getenv('SUPABASE_PV_TABLE', 'pv_readings')
 MAIN_LOOP_SLEEP_MINUTES = 120
 HDG_SOURCES = [
     {"name": "Brenner 1", "ip": HDGIP1},

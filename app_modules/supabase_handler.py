@@ -128,6 +128,59 @@ def save_heating_data(readings: list[dict]):
         )
         return False
 
+def save_pv_readings(readings: list[dict]):
+    """Upsert Fronius lifetime counter rows into pv_readings."""
+    supabase = get_supabase_client()
+    if not supabase:
+        logger.log_error(
+            "Supabase client not available. Cannot save PV readings.",
+            include_traceback=False,
+        )
+        return False
+    if not readings:
+        logger.log_error(
+            "No PV readings supplied for insertion.",
+            include_traceback=False,
+        )
+        return False
+
+    names = ", ".join(sorted({row.get("device_name", "?") for row in readings}))
+    logger.log_message(
+        f"Attempting to upsert {len(readings)} PV reading(s) "
+        f"into {config.SUPABASE_PV_TABLE}: {names}"
+    )
+    try:
+        response = (
+            supabase.table(config.SUPABASE_PV_TABLE)
+            .upsert(readings, on_conflict="device_name,read_at")
+            .execute()
+        )
+        if hasattr(response, "data") and response.data:
+            logger.log_message(
+                f"Saved {len(response.data)} PV reading(s) to "
+                f"{config.SUPABASE_PV_TABLE}."
+            )
+            return True
+        logger.log_error(
+            f"PV readings upsert returned no data: {response}",
+            include_traceback=False,
+        )
+        return False
+    except APIError as api_err:
+        logger.log_error(
+            "Supabase API error while saving PV readings: "
+            f"{api_err.message} (Code: {api_err.code}, "
+            f"Details: {api_err.details})",
+            include_traceback=False,
+        )
+        return False
+    except Exception as e:
+        logger.log_error(
+            f"Unexpected error while saving PV readings: {e}",
+            include_traceback=True,
+        )
+        return False
+
 def upload_image_to_storage(image_bytes: bytes, bucket_path: str):
     """Uploads image bytes to Supabase storage."""
     supabase = get_supabase_client()
