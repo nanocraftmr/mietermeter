@@ -23,8 +23,8 @@ def _parse_fronius_ips(raw: str | None) -> list[str]:
     """Parse one or many Fronius IPs from FRONIUS_IPS without code changes.
 
     Accepts comma / semicolon / whitespace separated values, e.g.:
-      FRONIUS_IPS=192.168.0.85
-      FRONIUS_IPS=192.168.0.85,192.168.0.104
+      FRONIUS_IPS=<FRONIUS-IP>
+      FRONIUS_IPS=<FRONIUS-IP-1>,<FRONIUS-IP-2>
     """
     if not raw:
         return []

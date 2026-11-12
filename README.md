@@ -30,7 +30,7 @@
 
         # Optional: Fronius PV lifetime counters → public.pv_readings
         # One IP or many (comma / semicolon / space separated). No code change needed.
-        FRONIUS_IPS="192.168.0.85,192.168.0.104"
+        FRONIUS_IPS="<FRONIUS-IP-1>,<FRONIUS-IP-2>"
         FRONIUS_READING_HOUR="23"
         SUPABASE_PV_TABLE="pv_readings"
         ```
@@ -202,9 +202,12 @@ a battery percentage.
 
 ## Fronius PV readings
 
-Every local day at `FRONIUS_READING_HOUR` (default **23:00**) the app reads each
-IP in `FRONIUS_IPS` and upserts one row per device into Supabase
-`public.pv_readings`.
+When `FRONIUS_IPS` is set, one collection runs at application start (same
+pattern as the Q log test run). Afterwards, every local day at
+`FRONIUS_READING_HOUR` (default **23:00**) the app reads each IP in
+`FRONIUS_IPS` and upserts one row per device into Supabase `public.pv_readings`.
+
+Put real device IPs only in the private `.env` on the Pi — never commit them.
 
 | Column | Source |
 | --- | --- |

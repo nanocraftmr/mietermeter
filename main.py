@@ -198,10 +198,16 @@ def collect_and_save_pv_readings():
 
 
 def pv_worker():
-    """Run once per local calendar day at FRONIUS_READING_HOUR (default 23)."""
+    """Startup test run, then once per local day at FRONIUS_READING_HOUR."""
     hour = config.FRONIUS_READING_HOUR
     logger.log_message(f"Fronius PV scheduler started for hour {hour}:00.")
     collected_on = None
+    startup_time = datetime.datetime.now()
+
+    logger.log_message("Starting one initial Fronius PV collection for testing.")
+    collect_and_save_pv_readings()
+    if startup_time.hour == hour:
+        collected_on = startup_time.date()
 
     while True:
         now = datetime.datetime.now()
