@@ -211,7 +211,7 @@ Put real device IPs only in the private `.env` on the Pi — never commit them.
 
 | Column | Source |
 | --- | --- |
-| `device_name` | `GET /solar_api/v1/GetInverterInfo.cgi` → `CustomName` (e.g. `PV Esterhazy`) |
+| `device_name` | `GET /solar_api/v1/GetInverterInfo.cgi` → `CustomName` (e.g. `PV Home`) |
 | `ip_address` | IP from `FRONIUS_IPS` |
 | `read_at` | API `Head.Timestamp` |
 | `total_production` | `GetInverterRealtimeData.cgi?Scope=System` → `TOTAL_ENERGY` (Wh) |
