@@ -27,6 +27,12 @@
         QLOG_ADDRESS="<QLOG-BLUETOOTH-MAC>"
         QLOG_CHANNEL="5"
         SUPABASE_HEATING_TABLE="heating_meter_readings"
+
+        # Optional: Fronius PV lifetime counters → public.pv_readings
+        # One IP or many (comma / semicolon / space separated). No code change needed.
+        FRONIUS_IPS="192.168.0.85,192.168.0.104"
+        FRONIUS_READING_HOUR="23"
+        SUPABASE_PV_TABLE="pv_readings"
         ```
 
     Docker Compose loads this file only when the container starts. Secrets such
@@ -193,6 +199,51 @@ Stored fields include the current allocation value, billing-date value and
 date, meter clock, low-battery warning, device status, error date and received
 signal strength. Q caloric 5.5 devices provide only a low-battery warning, not
 a battery percentage.
+
+## Fronius PV readings
+
+Every local day at `FRONIUS_READING_HOUR` (default **23:00**) the app reads each
+IP in `FRONIUS_IPS` and upserts one row per device into Supabase
+`public.pv_readings`.
+
+| Column | Source |
+| --- | --- |
+| `device_name` | `GET /solar_api/v1/GetInverterInfo.cgi` → `CustomName` (e.g. `PV Esterhazy`) |
+| `ip_address` | IP from `FRONIUS_IPS` |
+| `read_at` | API `Head.Timestamp` |
+| `total_production` | `GetInverterRealtimeData.cgi?Scope=System` → `TOTAL_ENERGY` (Wh) |
+| `total_feed_in` | `GetMeterRealtimeData.cgi?Scope=System` → `EnergyReal_WAC_Sum_Produced` (Wh) |
+| `total_grid_import` | same meter call → `EnergyReal_WAC_Sum_Consumed` (Wh) |
+
+Values are **lifetime counters** (raw Wh), not day deltas. Day energy is
+`today − yesterday` on these totals.
+
+Create the table once in the Supabase SQL Editor if it does not exist yet:
+
+```sql
+create table public.pv_readings (
+  id bigint generated always as identity not null,
+  device_name text not null,
+  ip_address inet null,
+  read_at timestamp with time zone not null,
+  total_production numeric null,
+  total_feed_in numeric null,
+  total_grid_import numeric null,
+  created_at timestamp with time zone not null default now(),
+  constraint pv_readings_pkey primary key (id),
+  constraint pv_readings_device_read_at_key unique (device_name, read_at)
+) TABLESPACE pg_default;
+
+create index IF not exists pv_readings_read_at_idx
+  on public.pv_readings using btree (read_at desc) TABLESPACE pg_default;
+```
+
+Manual one-shot test inside the container (after `FRONIUS_IPS` is set):
+
+```bash
+docker-compose exec -T hdg_app python -c \
+  "from main import collect_and_save_pv_readings; print(collect_and_save_pv_readings())"
+```
 
 ## Troubleshooting
 

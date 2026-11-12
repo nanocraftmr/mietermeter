@@ -7,7 +7,7 @@ import uuid
 from app_modules import config, logger, utils, camera_handler, supabase_handler
 
 try:
-    from worker import hdg, qlog
+    from worker import fronius, hdg, qlog
 except ImportError:
     logger.log_error(
         "Failed to import worker modules. Ensure worker files exist.",
@@ -156,6 +156,61 @@ def heating_worker(mac_address):
         time.sleep(60)
 
 
+def collect_and_save_pv_readings():
+    """Read all configured Fronius devices and upsert into pv_readings."""
+    if not config.FRONIUS_IPS:
+        logger.log_error(
+            "No FRONIUS_IPS configured. Skipping PV collection.",
+            include_traceback=False,
+        )
+        return False
+
+    logger.log_message(
+        "Starting Fronius PV collection for: "
+        + ", ".join(config.FRONIUS_IPS)
+    )
+    try:
+        rows, errors = fronius.fetch_all_pv_readings(config.FRONIUS_IPS)
+    except Exception as e:
+        logger.log_error(f"Fronius PV collection failed: {e}", include_traceback=True)
+        return False
+
+    for error in errors:
+        logger.log_error(f"Fronius device error: {error}", include_traceback=False)
+
+    if not rows:
+        logger.log_error(
+            "Fronius PV collection produced no readings.",
+            include_traceback=False,
+        )
+        return False
+
+    for row in rows:
+        logger.log_message(
+            f"PV {row['device_name']} ({row['ip_address']}): "
+            f"production={row['total_production']} Wh, "
+            f"feed_in={row['total_feed_in']} Wh, "
+            f"grid_import={row['total_grid_import']} Wh "
+            f"@ {row['read_at']}"
+        )
+
+    return supabase_handler.save_pv_readings(rows)
+
+
+def pv_worker():
+    """Run once per local calendar day at FRONIUS_READING_HOUR (default 23)."""
+    hour = config.FRONIUS_READING_HOUR
+    logger.log_message(f"Fronius PV scheduler started for hour {hour}:00.")
+    collected_on = None
+
+    while True:
+        now = datetime.datetime.now()
+        if now.hour == hour and collected_on != now.date():
+            collected_on = now.date()
+            collect_and_save_pv_readings()
+        time.sleep(60)
+
+
 def main_loop():
     logger.log_message("=" * 30 + " Script Start " + "=" * 30)
     logger.log_message(f"Current Time: {datetime.datetime.now()}")
@@ -190,6 +245,18 @@ def main_loop():
             "Add the Q log Bluetooth MAC address to .env and restart the "
             "container. No default Bluetooth address is used.",
             include_traceback=False,
+        )
+
+    if config.FRONIUS_IPS:
+        threading.Thread(target=pv_worker, daemon=True).start()
+        logger.log_message(
+            "Fronius PV scheduler enabled for devices: "
+            + ", ".join(config.FRONIUS_IPS)
+        )
+    else:
+        logger.log_message(
+            "Fronius PV collection disabled: set FRONIUS_IPS in .env "
+            "(comma-separated IPs) to enable nightly 23:00 uploads."
         )
 
     cycle = 0
